@@ -1,8 +1,10 @@
 import asyncio
+import json
 from time import time
 from datetime import datetime
+from urllib import parse
 from urllib.parse import unquote
-
+import requests
 import aiohttp
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
@@ -44,11 +46,11 @@ class Claimer:
                     raise InvalidSession(self.session_name)
 
             web_view = await self.tg_client.invoke(RequestWebView(
-            peer=await self.tg_client.resolve_peer('seed_coin_bot'),
-            bot=await self.tg_client.resolve_peer('seed_coin_bot'),
-            platform='android',
-            from_bot_menu=False,
-            url='https://seeddao_bot.gamefi.org/'
+                peer=await self.tg_client.resolve_peer('quackquack_game_bot'),
+                bot=await self.tg_client.resolve_peer('quackquack_game_bot'),
+                platform='android',
+                from_bot_menu=False,
+                url='https://api.quackquack.games/'
             ))
 
             auth_url = web_view.url
@@ -67,13 +69,14 @@ class Claimer:
             logger.error(f"{self.session_name} | Unknown error during Authorization: {error}")
             await asyncio.sleep(delay=3)
 
-    async def get_mining_data(self, http_client: aiohttp.ClientSession) -> dict[str]:
+    async def login_telegram(self, tg_web_data: str) -> str:
         try:
-            response = await http_client.get('https://seeddao.org/api/v1/profile')
-            response.raise_for_status()
-
-            response_json = await response.json()
-            return response_json
+            payload = dict(parse.parse_qsl(tg_web_data))
+            payload['user'] = json.loads(payload['user'])
+            print(json.dumps(payload))
+            response =  requests.post('https://api.quackquack.games/auth/telegram-login',data=json.dumps(payload),headers=headers)
+            token = response.json()['data']['token']
+            return token
         except Exception as error:
             logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
             await asyncio.sleep(delay=3)
@@ -81,9 +84,20 @@ class Claimer:
 
     async def send_claim(self, http_client: aiohttp.ClientSession) -> bool:
         try:
-            response = await http_client.post('https://seeddao.org/api/v1/seed/claim', json={})
+            response = await http_client.get('https://api.quackquack.games/nest/list', json={})
             response.raise_for_status()
+            data = await response.json()
+            data = data.get('data').get('nest')
 
+            nest_ids = [i.get('id') for i in data]
+
+            claim_header = http_client.headers.copy()
+            claim_header['content-type']= 'application/x-www-form-urlencoded'
+            for i in nest_ids:
+                asyncio.sleep(1)
+                response =  requests.post('https://api.quackquack.games/nest/collect',headers=claim_header, data=f'nest_id={i}')
+                print(response.json())
+            asyncio.sleep(10)
             return True
         except Exception as error:
             logger.error(f"{self.session_name} | Unknown error when Claiming: {error}")
@@ -112,29 +126,30 @@ class Claimer:
                 try:
                     if time() - access_token_created_time >= 3600:
                         tg_web_data = await self.get_tg_web_data(proxy=proxy)
-                        print("runnnn")
-                        http_client.headers["telegram-data"] = tg_web_data
-                        headers["telegram-data"] = tg_web_data
+                        token = await self.login_telegram(tg_web_data)
+                        # http_client.headers["telegram-data"] = tg_web_data
+                        http_client.headers['authorization'] = f'Bearer {token}'
+                        # headers["telegram-data"] = tg_web_data
 
                         access_token_created_time = time()
 
-                        mining_data = await self.get_mining_data(http_client=http_client)
+                        mining_data = await self.send_claim(http_client=http_client)
 
-                        last_claim_time = mining_data['data']['last_claim']
+                        # last_claim_time = mining_data['data']['last_claim']
                         
 
-                        logger.info(f"{self.session_name} | Last claim time: {last_claim_time}")
+                        # logger.info(f"{self.session_name} | Last claim time: {last_claim_time}")
 
 
-                        status = await self.send_claim(http_client=http_client)
-                        #await asyncio.sleep(delay=settings.SLEEP_BETWEEN_CLAIM)
-                        if status:
-                            mining_data = await self.get_mining_data(http_client=http_client)
+                        # status = await self.send_claim(http_client=http_client)
+                        # #await asyncio.sleep(delay=settings.SLEEP_BETWEEN_CLAIM)
+                        # if status:
+                        #     mining_data = await self.get_mining_data(http_client=http_client)
 
 
-                            logger.success(f"{self.session_name} | Successful claim | ")
+                        #     logger.success(f"{self.session_name} | Successful claim | ")
 
-                            claim_time = time()
+                        #     claim_time = time()
 
 
                 except InvalidSession as error:

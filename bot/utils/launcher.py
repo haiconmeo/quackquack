@@ -15,10 +15,12 @@ from bot.core.registrator import register_sessions
 
 start_text = """
 
-░█▀▀█ █▀▀█ █▀▀ █ █ █▀▀ ▀▀█▀▀ ░█▀▀▀  ▀  ░█▀▀█ █▀▀█ ▀▀█▀▀ 
-░█▄▄█ █  █ █   █▀▄ █▀▀   █   ░█▀▀▀ ▀█▀ ░█▀▀▄ █  █   █   
-░█    ▀▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀   ▀   ░█    ▀▀▀ ░█▄▄█ ▀▀▀▀   ▀  
 
+
+█▀█ █░█ ▄▀█ █▀▀ █▄▀ █▀█ █░█ ▄▀█ █▀▀ █▄▀
+▀▀█ █▄█ █▀█ █▄▄ █░█ ▀▀█ █▄█ █▀█ █▄▄ █░█
+
+by haiconmeo. donate to me. shb 0329605891
 Select an action:
 
     1. Create session
