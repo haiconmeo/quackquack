@@ -4,10 +4,10 @@ from time import time
 from datetime import datetime
 from urllib import parse
 from urllib.parse import unquote
-import requests
 import aiohttp
 from aiohttp_proxy import ProxyConnector
 from better_proxy import Proxy
+import httpx
 from pyrogram import Client
 from pyrogram.errors import Unauthorized, UserDeactivated, AuthKeyUnregistered
 from pyrogram.raw.functions.messages import RequestWebView
@@ -73,9 +73,10 @@ class Claimer:
         try:
             payload = dict(parse.parse_qsl(tg_web_data))
             payload['user'] = json.loads(payload['user'])
-            print(json.dumps(payload))
-            response =  requests.post('https://api.quackquack.games/auth/telegram-login',data=json.dumps(payload),headers=headers)
+            print(payload)
+            response =  httpx.post('https://api.quackquack.games/auth/telegram-login',data=json.dumps(payload),headers=headers)
             token = response.json()['data']['token']
+            logger.info(f"{self.session_name} | username {payload['user']['username']}")
             return token
         except Exception as error:
             logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
@@ -94,10 +95,10 @@ class Claimer:
             claim_header = http_client.headers.copy()
             claim_header['content-type']= 'application/x-www-form-urlencoded'
             for i in nest_ids:
-                asyncio.sleep(1)
-                response =  requests.post('https://api.quackquack.games/nest/collect',headers=claim_header, data=f'nest_id={i}')
-                print(response.json())
-            asyncio.sleep(10)
+                await asyncio.sleep(0.5)
+                response =  httpx.post('https://api.quackquack.games/nest/collect',headers=claim_header, data=f'nest_id={i}')
+                logger.info(f"Claim nest")
+            await asyncio.sleep(3)
             return True
         except Exception as error:
             logger.error(f"{self.session_name} | Unknown error when Claiming: {error}")
@@ -127,30 +128,10 @@ class Claimer:
                     if time() - access_token_created_time >= 3600:
                         tg_web_data = await self.get_tg_web_data(proxy=proxy)
                         token = await self.login_telegram(tg_web_data)
-                        # http_client.headers["telegram-data"] = tg_web_data
-                        http_client.headers['authorization'] = f'Bearer {token}'
-                        # headers["telegram-data"] = tg_web_data
-
-                        access_token_created_time = time()
-
-                        mining_data = await self.send_claim(http_client=http_client)
-
-                        # last_claim_time = mining_data['data']['last_claim']
-                        
-
-                        # logger.info(f"{self.session_name} | Last claim time: {last_claim_time}")
-
-
-                        # status = await self.send_claim(http_client=http_client)
-                        # #await asyncio.sleep(delay=settings.SLEEP_BETWEEN_CLAIM)
-                        # if status:
-                        #     mining_data = await self.get_mining_data(http_client=http_client)
-
-
-                        #     logger.success(f"{self.session_name} | Successful claim | ")
-
-                        #     claim_time = time()
-
+                        if token:
+                            http_client.headers['authorization'] = f'Bearer {token}'
+                            access_token_created_time = time()
+                            await self.send_claim(http_client=http_client)
 
                 except InvalidSession as error:
                     raise error
@@ -161,7 +142,7 @@ class Claimer:
 
                 else:
                     logger.info(f"Sleep 1min")
-                    await asyncio.sleep(delay=60)
+                    await asyncio.sleep(delay=1)
 
 
 async def run_claimer(tg_client: Client, proxy: str | None):
