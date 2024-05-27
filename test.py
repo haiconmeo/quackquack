@@ -147,13 +147,16 @@ async def run():
         while True:
             headers['authorization'] = f'Bearer {token}'
             response =  requests.get('https://api.quackquack.games/nest/list',headers=headers)
-            data = response.json().get('data').get('nest')
-            nest_ids = [i.get('id') for i in data]
-            claim_header = headers
-            claim_header['content-type']= 'application/x-www-form-urlencoded'
-            for i in nest_ids:
-                sleep(1)
-                response =  requests.post('https://api.quackquack.games/nest/collect',headers=claim_header, data=f'nest_id={i}')
-                print(response.json())
+            try:
+                data = response.json().get('data').get('nest')
+                nest_ids = [i.get('id') for i in data]
+                claim_header = headers
+                claim_header['content-type']= 'application/x-www-form-urlencoded'
+                for i in nest_ids:
+                    sleep(1)
+                    response =  requests.post('https://api.quackquack.games/nest/collect',headers=claim_header, data=f'nest_id={i}')
+                    print(response.json())
+            except:
+                pass
             sleep(10)
 asyncio.run(run())

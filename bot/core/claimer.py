@@ -76,7 +76,7 @@ class Claimer:
             print(payload)
             response =  httpx.post('https://api.quackquack.games/auth/telegram-login',data=json.dumps(payload),headers=headers)
             token = response.json()['data']['token']
-            logger.info(f"{self.session_name} | username {payload['user']['username']}")
+            logger.info(f"{self.session_name} | username {payload['user'].get('username')}")
             return token
         except Exception as error:
             logger.error(f"{self.session_name} | Unknown error when getting Profile Data: {error}")
