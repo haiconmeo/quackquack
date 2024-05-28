@@ -122,27 +122,31 @@ class Claimer:
         async with aiohttp.ClientSession(headers=headers, connector=proxy_conn) as http_client:
             if proxy:
                 await self.check_proxy(http_client=http_client, proxy=proxy)
-
+            tg_web_data = await self.get_tg_web_data(proxy=proxy)
+            token = await self.login_telegram(tg_web_data)
             while True:
                 try:
-                    if time() - access_token_created_time >= 3600:
+                    # if time() - access_token_created_time >= 3600:
+                        
+                    if token:
+                        http_client.headers['authorization'] = f'Bearer {token}'
+                        access_token_created_time = time()
+                        await self.send_claim(http_client=http_client)
+                    else:
                         tg_web_data = await self.get_tg_web_data(proxy=proxy)
                         token = await self.login_telegram(tg_web_data)
-                        if token:
-                            http_client.headers['authorization'] = f'Bearer {token}'
-                            access_token_created_time = time()
-                            await self.send_claim(http_client=http_client)
 
                 except InvalidSession as error:
+                    logger.info(f"error")
                     raise error
 
                 except Exception as error:
                     logger.error(f"{self.session_name} | Unknown error: {error}")
                     await asyncio.sleep(delay=3)
 
-                else:
-                    logger.info(f"Sleep 1min")
-                    await asyncio.sleep(delay=1)
+                # else:
+                #     logger.info(f"Sleep 1min")
+                #     await asyncio.sleep(delay=1)
 
 
 async def run_claimer(tg_client: Client, proxy: str | None):
